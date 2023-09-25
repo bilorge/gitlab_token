@@ -2,11 +2,10 @@
 """
 Script that creates Personal Access Token for Gitlab API;
 Tested with:
-- Gitlab Community Edition 10.1.4
-- Gitlab Enterprise Edition 12.6.2
-- Gitlab Enterprise Edition 13.4.4
+- Gitlab Enterprise Edition 15.1.6
 """
 import sys
+import json
 import requests
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
@@ -54,18 +53,17 @@ def sign_in(csrf, cookies):
     return token, r.history[0].cookies
 
 
-def obtain_personal_access_token(name, expires_at, csrf, cookies, authenticity_token):
+def obtain_personal_access_token(name, expires_at, csrf, cookies):
     data = {
         "personal_access_token[expires_at]": expires_at,
         "personal_access_token[name]": name,
         "personal_access_token[scopes][]": "api",
-        "authenticity_token": authenticity_token,
         "utf8": "✓"
     }
     data.update(csrf)
     r = requests.post(pat_route, data=data, cookies=cookies)
-    soup = BeautifulSoup(r.text, "lxml")
-    token = soup.find('input', id='created-personal-access-token').get('value')
+    tokens = json.loads(r.text)
+    token = tokens["new_token"]
     return token
 
 
@@ -74,11 +72,10 @@ def main():
     print("root", csrf1, cookies1)
     csrf2, cookies2 = sign_in(csrf1, cookies1)
     print("sign_in", csrf2, cookies2)
-    authenticity_token = obtain_authenticity_token(cookies2)
 
     name = sys.argv[1]
     expires_at = sys.argv[2]
-    token = obtain_personal_access_token(name, expires_at, csrf2, cookies2, authenticity_token)
+    token = obtain_personal_access_token(name, expires_at, csrf2, cookies2)
     print(token)
 
 
